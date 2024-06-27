@@ -31,6 +31,14 @@ async def set_timezone(ctx, offset: int):
         f'Décalage horaire défini à {offset} heures pour {ctx.author}.')
 
 
+@bot.command(name="timeforme", aliases=['myTime'])
+async def currentTime(ctx):
+    user_timezone = timezones.get(ctx.author.id, 0)
+    currentT = datetime.now()
+    currentT -= timedelta(hours=user_timezone)
+    await ctx.send("Pour {} il est {}".format(ctx.author,currentT))
+
+
 def parse_duration(duration: str):  #Return timedelta
     match = re.match(r'(\d+)([HhMm])', duration)
     if not match:
@@ -51,7 +59,6 @@ async def set_reminder(ctx, *args):
     - !rappel HH:MM Message du rappel (pour un rappel aujourd'hui)
     - !rappel YYYY-MM-DD HH:MM Message du rappel (pour un rappel à une date spécifique)
     - !rappel 1H Message du rappel (pour un rappel dans 1 heure)
-    - !rappel 10m Message du rappel (pour un rappel dans 10 minutes)
     """
     duration_or_time, date_str, time_str, message = "", "", "", ""
     if len(args) < 2:
