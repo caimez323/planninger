@@ -22,13 +22,15 @@ The bot will probably not be hosted in the same UTC as you.
 You will certainly need to setup your personnal time shift with this command.
 `!settimezone +4`
 
-(You also can set minus smth)
+(You also can set minus)
 
-### timeforme
+### myTime/timeforme
 
 Use this command to see how the bot see you in term of date/time. This way you can set your time zone with more accuracy
+`!myTime`
 
-
+The bot will answer you with this syntax :
+`Pour {USER} il est YYYY-MM-DD HH:MM:SS:uSSSSSS`
 
 ## FAQ
 
