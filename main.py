@@ -31,10 +31,7 @@ async def set_timezone(ctx, offset: int):
         f'Décalage horaire défini à {offset} heures pour {ctx.author}.')
 
 
-def parse_duration(duration: str):
-    """
-    Analyse une chaîne de caractères de durée comme '1H' ou '10m' et retourne un objet timedelta.
-    """
+def parse_duration(duration: str):  #Return timedelta
     match = re.match(r'(\d+)([HhMm])', duration)
     if not match:
         return None
@@ -47,20 +44,19 @@ def parse_duration(duration: str):
     return None
 
 
-@bot.command(name='rappel')
+@bot.command(name='rappel', aliases=['remind'])
 async def set_reminder(ctx, *args):
     """
     Définit un rappel.
-    Utilisation :
     - !rappel HH:MM Message du rappel (pour un rappel aujourd'hui)
     - !rappel YYYY-MM-DD HH:MM Message du rappel (pour un rappel à une date spécifique)
     - !rappel 1H Message du rappel (pour un rappel dans 1 heure)
     - !rappel 10m Message du rappel (pour un rappel dans 10 minutes)
     """
+    duration_or_time, date_str, time_str, message = "", "", "", ""
     if len(args) < 2:
         await ctx.send(
-            'Utilisation correcte : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message ou !rappel 1H Message ou !rappel 10m Message'
-        )
+            'Format : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message ou !rappel 1H Message')
         return
 
     if len(args) == 2:
@@ -80,8 +76,7 @@ async def set_reminder(ctx, *args):
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
                 reminder_datetime = now + duration
             else:
-                reminder_time = datetime.strptime(duration_or_time,
-                                                  '%H:%M').time()
+                reminder_time = datetime.strptime(duration_or_time,'%H:%M').time()
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
                 reminder_datetime = datetime.combine(now.date(), reminder_time)
                 if reminder_datetime < now:
@@ -94,7 +89,7 @@ async def set_reminder(ctx, *args):
 
         reminders.append((reminder_datetime, ctx.author, message))
         await ctx.send(
-            f'Rappel défini pour {reminder_datetime.strftime("%Y-%m-%d %H:%M")} UTC.'
+            f'Rappel défini pour {reminder_datetime.strftime("%Y-%m-%d %H:%M")} (Heure locale).'
         )
     except ValueError:
         await ctx.send(
