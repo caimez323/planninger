@@ -1,4 +1,4 @@
-import os
+import os, re
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
@@ -31,25 +31,40 @@ async def set_timezone(ctx, offset: int):
         f'Décalage horaire défini à {offset} heures pour {ctx.author}.')
 
 
+def parse_duration(duration: str):
+    """
+    Analyse une chaîne de caractères de durée comme '1H' ou '10m' et retourne un objet timedelta.
+    """
+    match = re.match(r'(\d+)([HhMm])', duration)
+    if not match:
+        return None
+    amount, unit = match.groups()
+    amount = int(amount)
+    if unit.lower() == 'h':
+        return timedelta(hours=amount)
+    elif unit.lower() == 'm':
+        return timedelta(minutes=amount)
+    return None
+
+
 @bot.command(name='rappel')
 async def set_reminder(ctx, *args):
-    message = ""
-    time_str = ""
-    date_str = ""
     """
     Définit un rappel.
     Utilisation :
     - !rappel HH:MM Message du rappel (pour un rappel aujourd'hui)
     - !rappel YYYY-MM-DD HH:MM Message du rappel (pour un rappel à une date spécifique)
+    - !rappel 1H Message du rappel (pour un rappel dans 1 heure)
+    - !rappel 10m Message du rappel (pour un rappel dans 10 minutes)
     """
     if len(args) < 2:
         await ctx.send(
-            'Utilisation correcte : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message'
+            'Utilisation correcte : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message ou !rappel 1H Message ou !rappel 10m Message'
         )
         return
 
     if len(args) == 2:
-        time_str, message = args[0], args[1]
+        duration_or_time, message = args[0], args[1]
         date_str = None
     elif len(args) > 2:
         date_str, time_str = args[0], args[1]
@@ -59,12 +74,18 @@ async def set_reminder(ctx, *args):
         user_timezone = timezones.get(ctx.author.id, 0)
 
         if date_str is None:
-            # Cas où seule l'heure est fournie
-            reminder_time = datetime.strptime(time_str, '%H:%M').time()
-            now = datetime.utcnow() + timedelta(hours=user_timezone)
-            reminder_datetime = datetime.combine(now.date(), reminder_time)
-            if reminder_datetime < now:
-                reminder_datetime += timedelta(days=1)
+            # Cas où une durée ou une heure seule est fournie
+            duration = parse_duration(duration_or_time)
+            if duration:
+                now = datetime.utcnow() + timedelta(hours=user_timezone)
+                reminder_datetime = now + duration
+            else:
+                reminder_time = datetime.strptime(duration_or_time,
+                                                  '%H:%M').time()
+                now = datetime.utcnow() + timedelta(hours=user_timezone)
+                reminder_datetime = datetime.combine(now.date(), reminder_time)
+                if reminder_datetime < now:
+                    reminder_datetime += timedelta(days=1)
         else:
             # Cas où une date complète est fournie
             reminder_datetime = datetime.strptime(f"{date_str} {time_str}",
@@ -73,11 +94,11 @@ async def set_reminder(ctx, *args):
 
         reminders.append((reminder_datetime, ctx.author, message))
         await ctx.send(
-            f'Rappel défini pour {reminder_datetime.strftime("%Y-%m-%d %H:%M")} (votre fuseau).'
+            f'Rappel défini pour {reminder_datetime.strftime("%Y-%m-%d %H:%M")} UTC.'
         )
     except ValueError:
         await ctx.send(
-            'Format de date ou d\'heure invalide. Utilisation correcte : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message'
+            'Format de date ou d\'heure invalide. Utilisation correcte : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message ou !rappel 1H Message ou !rappel 10m Message'
         )
 
 
