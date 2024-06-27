@@ -121,5 +121,5 @@ async def check_reminders():
     for reminder in to_remove:
         reminders.remove(reminder)
 
-
-bot.run(os.environ["TOKEN"])
+token = os.getenv("DISCORD_TOKEN") or os.environ['TOKEN'] or ""
+bot.run(token)
