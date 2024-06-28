@@ -12,6 +12,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Liste des rappels
 reminders = []
 timezones = {}
+events = {}
 
 
 @bot.event
@@ -36,7 +37,7 @@ async def currentTime(ctx):
     user_timezone = timezones.get(ctx.author.id, 0)
     currentT = datetime.now()
     currentT -= timedelta(hours=user_timezone)
-    await ctx.send("Pour {} il est {}".format(ctx.author,currentT))
+    await ctx.send("Pour {} il est {}".format(ctx.author, currentT))
 
 
 def parse_duration(duration: str):  #Return timedelta
@@ -63,7 +64,8 @@ async def set_reminder(ctx, *args):
     duration_or_time, date_str, time_str, message = "", "", "", ""
     if len(args) < 2:
         await ctx.send(
-            'Format : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message ou !rappel 1H Message')
+            'Format : !rappel HH:MM Message ou !rappel YYYY-MM-DD HH:MM Message ou !rappel 1H Message'
+        )
         return
 
     if len(args) == 2:
@@ -83,7 +85,8 @@ async def set_reminder(ctx, *args):
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
                 reminder_datetime = now + duration
             else:
-                reminder_time = datetime.strptime(duration_or_time,'%H:%M').time()
+                reminder_time = datetime.strptime(duration_or_time,
+                                                  '%H:%M').time()
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
                 reminder_datetime = datetime.combine(now.date(), reminder_time)
                 if reminder_datetime < now:
@@ -104,8 +107,10 @@ async def set_reminder(ctx, *args):
         )
 
 
-@tasks.loop(seconds=60)  # Vérifie les rappels toutes les minutes
+@tasks.loop(seconds=60)  # Fonction qui se lance toutes les minutes
 async def check_reminders():
+
+    #Rappel
     now = datetime.utcnow()  # Utiliser l'heure UTC pour les rappels
     to_remove = []
     for reminder in reminders:
@@ -120,6 +125,93 @@ async def check_reminders():
     # Supprime les rappels envoyés
     for reminder in to_remove:
         reminders.remove(reminder)
+
+    #Events
+
+    now = datetime.utcnow()
+    to_remove = []
+
+    for event_name, details in events.items():
+        event_datetime = details['datetime']
+        if now >= event_datetime:
+            attendees = details['attendees']
+            channel = discord.utils.get(bot.get_all_channels(), name='flappy')
+            if channel:
+                mention_list = ' '.join(
+                    [f"<@{user_id}>" for user_id in attendees])
+                await channel.send(
+                    f"C'est l'heure de l'événement '{event_name}'! {mention_list}"
+                )
+            to_remove.append(event_name)
+
+    # Supprime les événements passés en dehors de la boucle d'itération
+    for event_name in to_remove:
+        del events[event_name]
+
+
+@bot.command(name='plannif')
+async def plan_event(ctx, day: str, time: str, *, event_name: str):
+    """
+    Planifie un nouvel événement.
+    Utilisation : !plannif YYYY-MM-DD HH:MM EVENTNAME
+    """
+    try:
+        event_datetime = datetime.strptime(f"{day} {time}", '%Y-%m-%d %H:%M')
+        if event_name in events:
+            await ctx.send(f"Un événement nommé '{event_name}' existe déjà.")
+            return
+
+        events[event_name] = {'datetime': event_datetime, 'attendees': []}
+        await ctx.send(
+            f"Événement '{event_name}' planifié pour le {event_datetime.strftime('%Y-%m-%d %H:%M')} UTC."
+        )
+    except ValueError:
+        await ctx.send(
+            "Format de date ou d'heure invalide. Utilisation correcte : !plannif YYYY-MM-DD HH:MM EVENTNAME"
+        )
+
+
+@bot.command(name='planning', aliases=['consult'])
+async def consult_events(ctx):
+    """
+    Consulte les événements planifiés.
+    Utilisation : !planning consult
+    """
+    if not events:
+        await ctx.send("Aucun événement planifié.")
+        return
+
+    message = "Événements planifiés :\n"
+    for event_name, details in events.items():
+        event_datetime = details['datetime']
+        attendees = details['attendees']
+        message += f"- {event_name} : {event_datetime.strftime('%Y-%m-%d %H:%M')} UTC (Participants : {len(attendees)})\n"
+
+    await ctx.send(message)
+
+
+@bot.command(name='inscr')
+async def register_event(ctx, event_name: str, action: str):
+    """
+    S'inscrire à un événement.
+    Utilisation : !inscr EVENTNAME inscription
+    """
+    if event_name not in events:
+        await ctx.send(f"Événement '{event_name}' non trouvé.")
+        return
+
+    if action.lower() != "inscription":
+        await ctx.send("Utilisation correcte : !plannif EVENTNAME inscription")
+        return
+
+    event = events[event_name]
+    if ctx.author.id in event['attendees']:
+        await ctx.send(f"Vous êtes déjà inscrit à l'événement '{event_name}'.")
+        return
+
+    event['attendees'].append(ctx.author.id)
+    await ctx.send(f"Vous êtes inscrit à l'événement '{event_name}'.")
+
 
 token = os.getenv("DISCORD_TOKEN") or os.environ['TOKEN'] or ""
 bot.run(token)
