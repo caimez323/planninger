@@ -141,12 +141,12 @@ async def check_reminders():
 
     now = datetime.utcnow()
     to_remove = []
-
+    channel = discord.utils.get(bot.get_all_channels(), name='flappy')
     for event_name, details in events.items():
         event_datetime = details['datetime']
+        await channel.send(event_datetime)
         if now >= event_datetime:
             attendees = details['attendees']
-            channel = discord.utils.get(bot.get_all_channels(), name='flappy')
             if channel:
                 mention_list = ' '.join(
                     [f"<@{user_id}>" for user_id in attendees])
@@ -160,7 +160,7 @@ async def check_reminders():
         del events[event_name]
 
 
-@bot.command(name='plannif', aliases=['event', 'orga', 'plan'])
+@bot.command(name='plan', aliases=['event', 'orga'])
 async def plan_event(ctx, day: str, time: str, *, event_name: str):
     """
     Planifie un nouvel événement.
@@ -169,7 +169,7 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
     try:
         event_datetime = datetime.strptime(f"{day} {time}", '%Y-%m-%d %H:%M')
         # Appliquer le décalage horaire du bot ici
-        event_datetime -= timedelta(hours=bot_timezone_offset)
+        event_datetime += timedelta(hours=bot_timezone_offset)
         if event_name in events:
             await ctx.send(f"Un événement nommé '{event_name}' existe déjà.")
             return
@@ -179,9 +179,9 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
         # Le pb c'est que ça affiche l'heure de prévu.
         # Le bot lui est décallé en vérité mais bon
         # TODO a corriger
-        display_time = event_datetime + timedelta(hours=bot_timezone_offset)
+        display_time = event_datetime - timedelta(hours=bot_timezone_offset)
         await ctx.send(
-            f"Événement '{event_name}' planifié pour le {display_time.strftime('%Y-%m-%d %H:%M')} (heure locale)."
+            f"Événement '{event_name}' planifié pour le {display_time.strftime('%Y-%m-%d %H:%M')} (heure hebergeur)."
         )
     except ValueError:
         await ctx.send(
@@ -211,7 +211,7 @@ async def consult_events(ctx):
 
 
 #Todo add pour se désinscrire
-@bot.command(name='inscr',aliases=['register','add'])
+@bot.command(name='inscr', aliases=['register', 'add', 'reg'])
 async def register_event(ctx, event_name: str):
     """
     S'inscrire à un événement.
