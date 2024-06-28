@@ -232,6 +232,13 @@ async def register_event(ctx, event_name: str, action: str):
     await ctx.send(f"Vous êtes inscrit à l'événement '{event_name}'.")
 
 
+@bot.command(name="botTime")
+async def displayBotTime(ctx):
+    currentT = datetime.now()
+    currentT -= timedelta(hours=bot_timezone_offset)
+    await ctx.send("Pour le bot il est {}".format(currentT))
+
+
 #######
 token = os.getenv("DISCORD_TOKEN") or os.environ['TOKEN'] or ""
 bot.run(token)
