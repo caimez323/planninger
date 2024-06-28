@@ -1,5 +1,4 @@
-import os, re
-import discord
+import discord, os, re
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 
@@ -9,7 +8,6 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Liste des rappels
 reminders = []
 timezones = {}
 events = {}
@@ -22,11 +20,12 @@ async def on_ready():
     check_reminders.start()
 
 
+#Pas d'utilité ???
 @bot.command(name='setbottimezone')
 async def set_bot_timezone(ctx, offset: int):
     """
     Définit le décalage horaire du bot en heures.
-    Utilisation : !setbottimezone offset (ex: !setbottimezone 2 pour UTC+2)
+    Utilisation : !setbottimezone offset
     """
     global bot_timezone_offset
     bot_timezone_offset = offset
@@ -37,7 +36,7 @@ async def set_bot_timezone(ctx, offset: int):
 async def set_timezone(ctx, offset: int):
     """
     Définit le décalage horaire de l'utilisateur en heures.
-    Utilisation : !settimezone offset (ex: !settimezone 2 pour UTC+2)
+    Utilisation : !settimezone offset +-
     """
     timezones[ctx.author.id] = offset
     await ctx.send(
@@ -161,11 +160,11 @@ async def check_reminders():
         del events[event_name]
 
 
-@bot.command(name='plannif')
+@bot.command(name='plannif', aliases=['event', 'orga', 'plan'])
 async def plan_event(ctx, day: str, time: str, *, event_name: str):
     """
     Planifie un nouvel événement.
-    Utilisation : !plannif YYYY-MM-DD HH:MM EVENTNAME
+    Utilisation : !plan YYYY-MM-DD HH:MM EVENTNAME
     """
     try:
         event_datetime = datetime.strptime(f"{day} {time}", '%Y-%m-%d %H:%M')
@@ -177,13 +176,16 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
 
         events[event_name] = {'datetime': event_datetime, 'attendees': []}
         # Afficher l'heure locale en prenant en compte le décalage horaire du bot
+        # Le pb c'est que ça affiche l'heure de prévu.
+        # Le bot lui est décallé en vérité mais bon
+        # TODO a corriger
         display_time = event_datetime + timedelta(hours=bot_timezone_offset)
         await ctx.send(
             f"Événement '{event_name}' planifié pour le {display_time.strftime('%Y-%m-%d %H:%M')} (heure locale)."
         )
     except ValueError:
         await ctx.send(
-            "Format de date ou d'heure invalide. Utilisation correcte : !plannif YYYY-MM-DD HH:MM EVENTNAME"
+            "Format de date ou d'heure invalide. Utilisation correcte : !plan YYYY-MM-DD HH:MM EVENTNAME"
         )
 
 
@@ -191,7 +193,7 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
 async def consult_events(ctx):
     """
     Consulte les événements planifiés.
-    Utilisation : !consult_events
+    Utilisation : !planning
     """
     if not events:
         await ctx.send("Aucun événement planifié.")
@@ -208,19 +210,15 @@ async def consult_events(ctx):
     await ctx.send(message)
 
 
-@bot.command(name='inscr')
-async def register_event(ctx, event_name: str, action: str):
+#Todo add pour se désinscrire
+@bot.command(name='inscr',aliases=['register','add'])
+async def register_event(ctx, event_name: str):
     """
     S'inscrire à un événement.
     Utilisation : !register_event EVENTNAME inscription
     """
     if event_name not in events:
         await ctx.send(f"Événement '{event_name}' non trouvé.")
-        return
-
-    if action.lower() != "inscription":
-        await ctx.send(
-            "Utilisation correcte : !register_event EVENTNAME inscription")
         return
 
     event = events[event_name]
