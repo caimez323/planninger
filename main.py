@@ -179,7 +179,7 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
         # Le pb c'est que ça affiche l'heure de prévu.
         # Le bot lui est décallé en vérité mais bon
         # TODO a corriger
-        display_time = event_datetime - timedelta(hours=bot_timezone_offset)
+        display_time = event_datetime
         await ctx.send(
             f"Événement '{event_name}' planifié pour le {display_time.strftime('%Y-%m-%d %H:%M')} (heure hebergeur)."
         )
@@ -189,7 +189,7 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
         )
 
 
-@bot.command(name='planning', aliases=['consult'])
+@bot.command(name='planning', aliases=['consult','pg'])
 async def consult_events(ctx):
     """
     Consulte les événements planifiés.
@@ -203,9 +203,9 @@ async def consult_events(ctx):
     for event_name, details in events.items():
         event_datetime = details['datetime']
         # Afficher l'heure locale en prenant en compte le décalage horaire du bot
-        display_time = event_datetime + timedelta(hours=bot_timezone_offset)
+        display_time = event_datetime
         attendees = details['attendees']
-        message += f"- {event_name} : {display_time.strftime('%Y-%m-%d %H:%M')} (heure locale) (Participants : {len(attendees)})\n"
+        message += f"- {event_name} : {display_time.strftime('%Y-%m-%d %H:%M')} (heure hebergeur) (Participants : {len(attendees)})\n"
 
     await ctx.send(message)
 
@@ -215,7 +215,7 @@ async def consult_events(ctx):
 async def register_event(ctx, event_name: str):
     """
     S'inscrire à un événement.
-    Utilisation : !register_event EVENTNAME inscription
+    Utilisation : !reg EVENTNAME
     """
     if event_name not in events:
         await ctx.send(f"Événement '{event_name}' non trouvé.")
@@ -228,6 +228,25 @@ async def register_event(ctx, event_name: str):
 
     event['attendees'].append(ctx.author.id)
     await ctx.send(f"Vous êtes inscrit à l'événement '{event_name}'.")
+
+
+@bot.command(name='unreg', aliases=['unregister', 'removeme', 'rm'])
+async def unregister_event(ctx, event_name: str):
+    """
+    Se désinscrire à un événement.
+    Utilisation : !unreg EVENTNAME
+    """
+    if event_name not in events:
+        await ctx.send(f"Événement '{event_name}' non trouvé.")
+        return
+
+    event = events[event_name]
+    if ctx.author.id not in event['attendees']:
+        await ctx.send(f"Vous n'êtes pas inscrit à l'événement '{event_name}'.")
+        return
+
+    event['attendees'].remove(ctx.author.id)
+    await ctx.send(f"Vous êtes désinscrit à l'événement '{event_name}'.")
 
 
 @bot.command(name="botTime")
