@@ -13,12 +13,24 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 reminders = []
 timezones = {}
 events = {}
+bot_timezone_offset = 0
 
 
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
     check_reminders.start()
+
+
+@bot.command(name='setbottimezone')
+async def set_bot_timezone(ctx, offset: int):
+    """
+    Définit le décalage horaire du bot en heures.
+    Utilisation : !setbottimezone offset (ex: !setbottimezone 2 pour UTC+2)
+    """
+    global bot_timezone_offset
+    bot_timezone_offset = offset
+    await ctx.send(f'Décalage horaire du bot défini à {offset} heures.')
 
 
 @bot.command(name='settimezone')
@@ -157,13 +169,17 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
     """
     try:
         event_datetime = datetime.strptime(f"{day} {time}", '%Y-%m-%d %H:%M')
+        # Appliquer le décalage horaire du bot ici
+        event_datetime -= timedelta(hours=bot_timezone_offset)
         if event_name in events:
             await ctx.send(f"Un événement nommé '{event_name}' existe déjà.")
             return
 
         events[event_name] = {'datetime': event_datetime, 'attendees': []}
+        # Afficher l'heure locale en prenant en compte le décalage horaire du bot
+        display_time = event_datetime + timedelta(hours=bot_timezone_offset)
         await ctx.send(
-            f"Événement '{event_name}' planifié pour le {event_datetime.strftime('%Y-%m-%d %H:%M')} UTC."
+            f"Événement '{event_name}' planifié pour le {display_time.strftime('%Y-%m-%d %H:%M')} (heure locale)."
         )
     except ValueError:
         await ctx.send(
@@ -175,7 +191,7 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
 async def consult_events(ctx):
     """
     Consulte les événements planifiés.
-    Utilisation : !planning consult
+    Utilisation : !consult_events
     """
     if not events:
         await ctx.send("Aucun événement planifié.")
@@ -184,8 +200,10 @@ async def consult_events(ctx):
     message = "Événements planifiés :\n"
     for event_name, details in events.items():
         event_datetime = details['datetime']
+        # Afficher l'heure locale en prenant en compte le décalage horaire du bot
+        display_time = event_datetime + timedelta(hours=bot_timezone_offset)
         attendees = details['attendees']
-        message += f"- {event_name} : {event_datetime.strftime('%Y-%m-%d %H:%M')} UTC (Participants : {len(attendees)})\n"
+        message += f"- {event_name} : {display_time.strftime('%Y-%m-%d %H:%M')} (heure locale) (Participants : {len(attendees)})\n"
 
     await ctx.send(message)
 
@@ -194,14 +212,15 @@ async def consult_events(ctx):
 async def register_event(ctx, event_name: str, action: str):
     """
     S'inscrire à un événement.
-    Utilisation : !inscr EVENTNAME inscription
+    Utilisation : !register_event EVENTNAME inscription
     """
     if event_name not in events:
         await ctx.send(f"Événement '{event_name}' non trouvé.")
         return
 
     if action.lower() != "inscription":
-        await ctx.send("Utilisation correcte : !plannif EVENTNAME inscription")
+        await ctx.send(
+            "Utilisation correcte : !register_event EVENTNAME inscription")
         return
 
     event = events[event_name]
@@ -213,5 +232,6 @@ async def register_event(ctx, event_name: str, action: str):
     await ctx.send(f"Vous êtes inscrit à l'événement '{event_name}'.")
 
 
+#######
 token = os.getenv("DISCORD_TOKEN") or os.environ['TOKEN'] or ""
 bot.run(token)
