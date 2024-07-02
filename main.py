@@ -163,8 +163,7 @@ async def check_reminders():
 @bot.command(name='plan', aliases=['event', 'orga'])
 async def plan_event(ctx, day: str, time: str, *, event_name: str):
     """
-    Planifie un nouvel événement.
-    Utilisation : !plan YYYY-MM-DD HH:MM EVENTNAME
+    Usage : !plan YYYY-MM-DD HH:MM EVENTNAME
     """
     try:
         event_datetime = datetime.strptime(f"{day} {time}", '%Y-%m-%d %H:%M')
@@ -175,10 +174,6 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
             return
 
         events[event_name] = {'datetime': event_datetime, 'attendees': []}
-        # Afficher l'heure locale en prenant en compte le décalage horaire du bot
-        # Le pb c'est que ça affiche l'heure de prévu.
-        # Le bot lui est décallé en vérité mais bon
-        # TODO a corriger
         display_time = event_datetime
         await ctx.send(
             f"Événement '{event_name}' planifié pour le {display_time.strftime('%Y-%m-%d %H:%M')} (heure hebergeur)."
@@ -192,7 +187,6 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
 @bot.command(name='planning', aliases=['consult','pg'])
 async def consult_events(ctx):
     """
-    Consulte les événements planifiés.
     Utilisation : !planning
     """
     if not events:
@@ -214,7 +208,6 @@ async def consult_events(ctx):
 @bot.command(name='inscr', aliases=['register', 'add', 'reg'])
 async def register_event(ctx, event_name: str):
     """
-    S'inscrire à un événement.
     Utilisation : !reg EVENTNAME
     """
     if event_name not in events:
@@ -233,7 +226,6 @@ async def register_event(ctx, event_name: str):
 @bot.command(name='unreg', aliases=['unregister', 'removeme', 'rm'])
 async def unregister_event(ctx, event_name: str):
     """
-    Se désinscrire à un événement.
     Utilisation : !unreg EVENTNAME
     """
     if event_name not in events:
