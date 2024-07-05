@@ -20,7 +20,6 @@ async def on_ready():
     check_reminders.start()
 
 
-#Pas d'utilité ???
 @bot.command(name='setbottimezone')
 async def set_bot_timezone(ctx, offset: int):
     """
@@ -95,10 +94,11 @@ async def set_reminder(ctx, *args):
             if duration:
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
                 reminder_datetime = now + duration
-            else:
+            else:  #Rappel avec l'heure et pas une durée
                 reminder_time = datetime.strptime(duration_or_time,
                                                   '%H:%M').time()
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
+                reminder_time += timedelta(hours=user_timezone)
                 reminder_datetime = datetime.combine(now.date(), reminder_time)
                 if reminder_datetime < now:
                     reminder_datetime += timedelta(days=1)
@@ -106,11 +106,11 @@ async def set_reminder(ctx, *args):
             # Cas où une date complète est fournie
             reminder_datetime = datetime.strptime(f"{date_str} {time_str}",
                                                   '%Y-%m-%d %H:%M')
-            reminder_datetime -= timedelta(hours=user_timezone)
 
+        reminder_datetime -= timedelta(hours=user_timezone)
         reminders.append((reminder_datetime, ctx.author, message))
         await ctx.send(
-            f'Rappel défini pour {reminder_datetime.strftime("%Y-%m-%d %H:%M")} (Heure locale).'
+            f'Rappel défini pour {(reminder_datetime-timedelta(hours=user_timezone)).strftime("%Y-%m-%d %H:%M")} (Heure locale).'
         )
     except ValueError:
         await ctx.send(
@@ -184,7 +184,7 @@ async def plan_event(ctx, day: str, time: str, *, event_name: str):
         )
 
 
-@bot.command(name='planning', aliases=['consult','pg'])
+@bot.command(name='planning', aliases=['consult', 'pg'])
 async def consult_events(ctx):
     """
     Utilisation : !planning
@@ -204,7 +204,6 @@ async def consult_events(ctx):
     await ctx.send(message)
 
 
-#Todo add pour se désinscrire
 @bot.command(name='inscr', aliases=['register', 'add', 'reg'])
 async def register_event(ctx, event_name: str):
     """
@@ -234,7 +233,8 @@ async def unregister_event(ctx, event_name: str):
 
     event = events[event_name]
     if ctx.author.id not in event['attendees']:
-        await ctx.send(f"Vous n'êtes pas inscrit à l'événement '{event_name}'.")
+        await ctx.send(f"Vous n'êtes pas inscrit à l'événement '{event_name}'."
+                       )
         return
 
     event['attendees'].remove(ctx.author.id)
