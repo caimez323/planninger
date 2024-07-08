@@ -98,14 +98,18 @@ async def set_reminder(ctx, *args):
                 reminder_time = datetime.strptime(duration_or_time,
                                                   '%H:%M').time()
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
-                reminder_time += timedelta(hours=user_timezone)
                 reminder_datetime = datetime.combine(now.date(), reminder_time)
-                if reminder_datetime < now:
+                reminder_datetime += 2*timedelta(hours=user_timezone)
+                print(now)
+                print(reminder_datetime)
+                #Il faut qu'ici on soit en heure locale, ça sera corrigé après
+                if (reminder_datetime) < now:
                     reminder_datetime += timedelta(days=1)
         else:
             # Cas où une date complète est fournie
             reminder_datetime = datetime.strptime(f"{date_str} {time_str}",
                                                   '%Y-%m-%d %H:%M')
+            reminder_datetime+= 2*timedelta(hours=user_timezone)
 
         reminder_datetime -= timedelta(hours=user_timezone)
         reminders.append((reminder_datetime, ctx.author, message))
