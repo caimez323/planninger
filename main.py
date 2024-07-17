@@ -100,8 +100,8 @@ async def set_reminder(ctx, *args):
                 now = datetime.utcnow() + timedelta(hours=user_timezone)
                 reminder_datetime = datetime.combine(now.date(), reminder_time)
                 reminder_datetime += 2*timedelta(hours=user_timezone)
-                print(now)
-                print(reminder_datetime)
+                #print(now)
+                #print(reminder_datetime)
                 #Il faut qu'ici on soit en heure locale, ça sera corrigé après
                 if (reminder_datetime) < now:
                     reminder_datetime += timedelta(days=1)
